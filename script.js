@@ -20,7 +20,7 @@ const account1 = {
     '2020-05-08T14:11:59.604Z',
     '2020-05-27T17:01:17.194Z',
     '2020-07-11T23:36:17.929Z',
-    '2020-07-12T10:51:36.790Z',
+    '2023-10-31T10:51:36.790Z',
   ],
   currency: 'EUR',
   locale: 'pt-PT', // de-DE
@@ -75,8 +75,27 @@ const inputCloseUsername = document.querySelector('.form__input--user');
 const inputClosePin = document.querySelector('.form__input--pin');
 //
 //Functions
+//Date formatting
+const formatDate = function (input) {
+  const givendate = new Date(input);
+  const day = `${givendate.getDate()}`.padStart(2, 0);
+  const month = `${givendate.getMonth() + 1}`.padStart(2, 0);
+  const year = givendate.getFullYear();
+  const hours = givendate.getHours();
+  const min = `${givendate.getMinutes()}`.padStart(2, 0);
+  const currentdate = new Date();
+  const dayspassed = Math.abs(givendate - currentdate) / 86400000;
+  if (dayspassed < 1) return `Today at ${hours}:${min}`;
+  else if (dayspassed > 1 && dayspassed < 2)
+    return `Yesterday at ${hours}:${min}`;
+  else {
+    return `on ${day}/${month}/${year}, ${hours}:${min}`;
+  }
+};
+//
+//Display Resultant balance
 const calcDisplayBalance = function (acc) {
-  const blance = acc.movements.reduce((acc, item) => acc + item);
+  const blance = Number(acc.movements.reduce((acc, item) => acc + item));
   labelBalance.textContent = `${blance.toFixed(2)} €`;
   acc.balance = blance;
 };
@@ -88,11 +107,14 @@ const calcdisplayMovements = function (acc, sort = false) {
     : acc.movements;
   movs.forEach(function (move, i) {
     const type = move > 0 ? 'deposit' : 'withdrawal';
+    //Date
+    const displaydate = `${formatDate(new Date(acc.movementsDates[i]))}`;
     const html = `
     <div class="movements__row">
           <div class="movements__type movements__type--${type}">${
       i + 1
     } ${type}</div>
+          <div class="movements__date">${displaydate}</div>
           <div class="movements__value">${Number(move).toFixed(2)}</div>
         </div>`;
     containerMovements.insertAdjacentHTML('afterbegin', html);
@@ -100,9 +122,9 @@ const calcdisplayMovements = function (acc, sort = false) {
 };
 
 const calcDisplaySummary = function (acc) {
-  const Inflow = acc.movements
-    .filter(mov => mov > 0)
-    .reduce((acc, mov) => acc + mov);
+  const Inflow = Number(
+    acc.movements.filter(mov => mov > 0).reduce((acc, mov) => acc + mov)
+  );
   labelSumIn.textContent = `${Inflow.toFixed(2)}€`;
 
   const Outflow = Math.abs(
@@ -144,19 +166,13 @@ const updateUI = function (acc) {
   //display summary
   calcDisplayBalance(acc);
 };
-//Fake login always
-currentAccount = account1;
-updateUI(currentAccount);
-containerApp.style.opacity = 100;
-//
+// //Fake login always
+// currentAccount = account1;
+// updateUI(currentAccount);
+// containerApp.style.opacity = 100;
+// //
 //Adding times
-const now = new Date();
-const day = `${now.getDate()}`.padStart(2, 0);
-const month = `${now.getMonth() + 1}`.padStart(2, 0);
-const year = now.getFullYear();
-const hours = now.getHours();
-const min = now.getMinutes();
-labelDate.textContent = `${day}/${month}/${year}, ${hours}:${min}`;
+labelDate.textContent = formatDate(new Date());
 
 //
 //button login
@@ -176,6 +192,7 @@ btnLogin.addEventListener('click', function (e) {
     inputLoginPin.blur();
     document.querySelector('.app').style.opacity = 100;
     updateUI(currentAccount);
+    timerout();
   } else if (currentAccount.pin !== Number(inputLoginPin.value)) {
     alert('Credentials mismatch, please try again with correct credentials');
   } else {
@@ -192,10 +209,14 @@ btnLoan.addEventListener('click', function (e) {
     inputAmt > 0 &&
     currentAccount.movements.some(value => value > inputAmt / 10)
   ) {
-    currentAccount.movements.push(inputAmt);
-    updateUI(currentAccount);
-    inputLoanAmount.value = '';
-    inputLoanAmount.blur();
+    setTimeout(function () {
+      currentAccount.movements.push(Number(inputAmt));
+      currentAccount.movementsDates.push(new Date().toISOString());
+      updateUI(currentAccount);
+      inputLoanAmount.value = '';
+      inputLoanAmount.blur();
+      setTimeout(() => alert('Loan successfully deposited!'), 0);
+    }, 4000);
   } else {
     alert(
       'Loan cannot be requested, please make a deposit which is atleast 0.1 times the loan amount'
@@ -216,6 +237,9 @@ btnTransfer.addEventListener('click', function (e) {
     receiver?.username !== currentAccount.username
   ) {
     inputTransferAmount.blur();
+    //add transfer date
+    currentAccount.movementsDates.push(new Date().toISOString());
+    receiver.movementsDates.push(new Date().toISOString());
     receiver.movements.push(receiverAmt);
     currentAccount.movements.push(-receiverAmt);
     updateUI(currentAccount);
@@ -241,7 +265,9 @@ btnClose.addEventListener('click', function (e) {
     console.log(inputusername);
     accounts.splice(index, 1);
     console.log(accounts);
-    alert('Account deleted successfully, sorry to see you go!!😔🥺');
+    setTimeout(() => {
+      alert('Account deleted successfully, sorry to see you go!!😔🥺');
+    }, 0);
   }
 });
 //
@@ -252,115 +278,26 @@ btnSort.addEventListener('click', function (e) {
   calcdisplayMovements(currentAccount.movements, !sorted);
   sorted = !sorted;
 });
-
-//////////////////////////  Lecture practice   ///////////////////////
-// console.log(accounts);
-// const movements = [200, 450, -400, 3000, -650, -130, 70, 1300];
-// const deposits1 = movements.map(function (mov) {
-//   return mov > 0;
-// });
-// const deposits2 = movements.filter(function (mov) {
-//   return mov > 0;
-// });
-// console.log(deposits1);
-// console.log(deposits2);
-// const balance = movements.reduce(function (acc, curr, i, arr) {
-//   return acc + curr;
-// }, 1000);
-// console.log(balance);
-// const maxMovement = movements.reduce((acc, mov) => (acc > mov ? acc : mov));
-// console.log(maxMovement);
-// const calcAvgHumanAge = function (arr) {
-//   const humanyears = arr.map(item => (item <= 2 ? 2 * item : 16 + item * 4));
-//   const exclude = humanyears.filter(item => item >= 18);
-//   const avgadultdogsage = exclude.reduce((acc, item) => acc + item);
-//   console.log(humanyears);
-//   console.log(exclude);
-//   console.log(avgadultdogsage / exclude.length);
-// };
-
-// calcAvgHumanAge([5, 2, 4, 1, 15, 8, 3]);
-// calcAvgHumanAge([16, 6, 10, 5, 6, 1, 4]);
-
-// const allmovements = accounts.map(acc => acc.movements);
-// console.log(allmovements.flat());
-// const overallvalue = allmovements.flat().reduce((acc, val) => acc + val);
-// console.log(overallvalue);
-
-// console.log(
-//   allmovements.flat().sort((a, b) => {
-//     if (a < b) {
-//       return -1; //keep order
-//     } else {
-//       return 1; //switch order
-//     }
-//   })
-// );
-//////////////////////////  Coding challenge - 4   ///////////////////////
-// const dogs = [
-//   {
-//     weight: 22,
-//     curFood: 250,
-//     owners: ['Alice', 'Bob'],
-//   },
-//   {
-//     weight: 8,
-//     curFood: 200,
-//     owners: ['Matilda'],
-//   },
-//   {
-//     weight: 13,
-//     curFood: 275,
-//     owners: ['Sarah', 'John'],
-//   },
-//   {
-//     weight: 32,
-//     curFood: 340,
-//     owners: ['Michael'],
-//   },
-// ];
-// //1.
-// const recFood = function (dogs) {
-//   dogs.map(item => (item.recFood = Math.trunc(item.weight ** 0.75 * 28)));
-// };
-// recFood(dogs);
-// console.log(dogs);
-// //2.
-// const dogSarah = dogs.find(dog => dog.owners.includes('Sarah'));
-// console.log(
-//   `Sarah's dog is eating too ${
-//     dogSarah.recFood > dogSarah.curFood ? 'little' : 'much'
-//   }`
-// );
-// //3.
-// const ownerseatTooMuch = dogs
-//   .filter(item => item.recFood < item.curFood)
-//   .flatMap(dog => dog.owners);
-// const ownerseatTooLittle = dogs
-//   .filter(item => item.recFood > item.curFood)
-//   .flatMap(dog => dog.owners);
-
-// console.log(ownerseatTooLittle);
-// console.log(ownerseatTooMuch);
-// //4.
-// console.log(`${ownerseatTooMuch.join("'s and ")}'s dogs eat too much`);
-// console.log(`${ownerseatTooLittle.join("'s and ")}'s dogs eat too little`);
-// //5.
-// console.log(
-//   dogs.some(
-//     item =>
-//       item.curFood > item.recFood * 0.9 && item.curFood < item.recFood * 1.1
-//   )
-// );
-// //7
-// console.log(
-//   dogs.filter(
-//     item =>
-//       item.curFood > item.recFood * 0.9 && item.curFood < item.recFood * 1.1
-//   )
-// );
-// //8
-// const sortedDogs = dogs.sort((a, b) => a.recFood - b.recFood);
-// console.log(sortedDogs);
 //
-///Creating dates
+// Logout timer
+const timerout = function () {
+  //set time to 5 minutes
+  let timeRem = 300;
+  //run till 5 minutes gets ended, and display the time each second
+
+  setInterval(function () {
+    const min = String(Math.trunc(timeRem / 60)).padStart(2, 0);
+    const sec = String(timeRem % 60).padStart(2, 0);
+    labelTimer.textContent = `${min}:${sec}`;
+    timeRem--;
+    if (timeRem === 0) {
+      clearTimeout(timerout);
+      labelWelcome.textContent = 'Log in to get started';
+      containerApp.style.opacity = 0;
+      setTimeout(function () {
+        alert('You have been logged out due to Timer out');
+      }, 0);
+    }
+  }, 1000);
+
+};
